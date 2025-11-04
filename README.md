@@ -9,10 +9,10 @@ among other things and through doing so, alleviates the problem.
 
 # Objectives:
 • Design a weekly calander planner that procedurely rings alarms on specific days of
-the week
-• Add a reminder system that limits the amount of time a user can hit snooze
+the week  
+• Add a reminder system that limits the amount of time a user can hit snooze  
 • Assure there is some sort of reward for not using up all snoozes, like fun display
-options
+options  
 
 # Scope:
 The scope of the project will like be simple, preferably an application one can run on their
@@ -27,9 +27,9 @@ customizable. If the user is able to stay focused the whole time, they can be re
 digital cosmetics.
 
 # Technology Stack:
-• Languages: Python
-• Database: SQL or None
-• Deployment Platform: Unsure/Local
+• Languages: Python  
+• Database: SQL or None  
+• Deployment Platform: Unsure/Local  
 
 # Expected Outcome:
 A working smarphone app or at least a build for one that can be exported in a zip file and/or
