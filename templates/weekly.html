@@ -1,0 +1,9 @@
+
+<html><head><link rel="stylesheet" href="/static/style.css"></head><body>
+<div class="navbar">{% for k,v in navbar.items() %}<a href="{{k}}"{% if k=='/weekly' %} class="active"{% endif %}>{{v}}</a>{% endfor %}</div>
+<div class="container"><h2>Weekly View</h2>
+{% for day,items in grid.items() %}
+<h3>{{day}}</h3>
+{% for t in items %}<div class="card"><strong>{{t.title}}</strong><br>{{t.start_time}} • {{t.category}}</div>{% endfor %}
+{% endfor %}
+</div></body></html>

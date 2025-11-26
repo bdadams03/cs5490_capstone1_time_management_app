@@ -1,0 +1,17 @@
+
+<html><head><link rel="stylesheet" href="/static/style.css"></head><body>
+<div class="navbar">{% for k,v in navbar.items() %}<a href="{{k}}"{% if k=='/tasks' %} class="active"{% endif %}>{{v}}</a>{% endfor %}</div>
+<div class="container"><h2>Tasks</h2>
+<form method="POST" class="card">
+<input name="title" placeholder="Task title">
+<select name="weekday"><option>Mon</option><option>Tue</option><option>Wed</option><option>Thu</option><option>Fri</option><option>Sat</option><option>Sun</option></select>
+<input name="start_time" placeholder="09:00">
+<input name="duration" placeholder="Duration">
+<input name="interval" placeholder="Interval">
+<input name="snooze" placeholder="Snooze">
+<input name="category" placeholder="Category">
+<button>Add Task</button></form>
+{% for t in tasks %}
+<div class="card"><strong>{{t.title}}</strong><br>{{t.weekday}} {{t.start_time}} • {{t.category}}</div>
+{% endfor %}
+</div></body></html>
