@@ -60,7 +60,9 @@ def analytics():
     for h in hist:
         totals[h.task_id]=totals.get(h.task_id,0)+1
 
-    tasks=s.query(Task).all()
+    now = datetime.datetime.now()
+    thirtyago = now - datetime.timedelta(days = 30)
+    tasks=s.query(Task).filter(Task.start_date >= thirtyago, Task.start_date <= now).all()
     data=[]
     for t in tasks:
         data.append((t.title,totals.get(t.id,0)))
