@@ -2,6 +2,7 @@
 from flask import Flask, render_template, request, redirect, send_file # pyright: ignore[reportMissingImports]
 from apscheduler.schedulers.background import BackgroundScheduler # pyright: ignore[reportMissingImports]
 from database import SessionLocal
+from sqlalchemy import desc
 from models import Task, TaskHistory
 import datetime, json
 
@@ -60,12 +61,12 @@ def analytics():
     for h in hist:
         totals[h.task_id]=totals.get(h.task_id,0)+1
 
-    now = datetime.datetime.now()
+    now = datetime.datetime.today()
     thirtyago = now - datetime.timedelta(days = 30)
-    tasks=s.query(Task).filter(Task.start_date >= thirtyago, Task.start_date <= now).all()
+    tasks=s.query(Task).filter(Task.start_date >= thirtyago.date(), Task.start_date <= now.date()).order_by(desc(Task.start_date)).all()
     data=[]
     for t in tasks:
-        data.append((t.title,totals.get(t.id,0)))
+        data.append((t.title,totals.get(t.id,0),t.start_date))
 
     return render_template("analytics.html",data=data,streak=5,consistency="80%",navbar=navbar)
 

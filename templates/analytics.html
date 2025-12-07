@@ -2,8 +2,8 @@
 <html><head><link rel="stylesheet" href="/static/style.css"></head><body>
 <div class="navbar">{% for k,v in navbar.items() %}<a href="{{k}}"{% if k=='/analytics' %} class="active"{% endif %}>{{v}}</a>{% endfor %}</div>
 <div class="container"><h2>Analytics</h2>
-<h3>Totals</h3>
-{% for t,c in data %}<div class="card">{{t}} — {{c}}</div>{% endfor %}
+<h3>Totals (Past 30 days)</h3>
+{% for t,c,sd in data %}<div class="card">{{t}} — {{c}} — {{sd.strftime('%m/%d/%Y')}}</div>{% endfor %}
 <h3>Consistency</h3><div class="card">{{consistency}}</div>
 <h3>Streak</h3><div class="card">{{streak}} days</div>
 </div></body></html>

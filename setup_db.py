@@ -11,13 +11,14 @@ s = Session()
 
 weekdays=["Mon","Tue","Wed","Thu","Fri","Sat","Sun"]
 cats=["Category A","Category B","Category C","Category D","Category E"]
-begin_date = datetime.datetime(2025, 10, 19)
-end_date = datetime.datetime(2025, 12, 19)
+begin_date = datetime.date(2025, 10, 19)
+end_date = datetime.date(2025, 12, 19)
 
 def rand_date(start, end):
     delta = end - start
     random_days = random.randrange(delta.days)
-    return (start + datetime.timedelta(days = random_days)).datetime()
+    return_date = (start+datetime.timedelta(days=random_days))
+    return return_date
 
 task_ids=[]
 for i in range(1,21):
@@ -32,7 +33,7 @@ for i in range(1,21):
     snooze=random.choice([1,2,3])
     cat=random.choice(cats)
 
-    t=Task(title=title,weekday=weekday,start_time=start, start_date=random_days,
+    t=Task(title=title,weekday=weekday,start_time=start,start_date=random_days,
            duration_minutes=duration,checkin_interval=interval,
            snooze_limit=snooze,category=cat)
     s.add(t); s.commit()
