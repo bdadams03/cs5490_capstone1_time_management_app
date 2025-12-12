@@ -5,13 +5,14 @@
 <form method="POST" class="card">
 <input name="title" placeholder="Task title">
 <select name="weekday"><option>Mon</option><option>Tue</option><option>Wed</option><option>Thu</option><option>Fri</option><option>Sat</option><option>Sun</option></select>
-<input name="start_time" placeholder="09:00">
+<input name="start_time" placeholder="Start Time (09:00)">
+<input name="start_date" placeholder="Start Date (MM/DD/YYYY)">
 <input name="duration" placeholder="Duration">
 <input name="interval" placeholder="Interval">
 <input name="snooze" placeholder="Snooze">
 <input name="category" placeholder="Category">
 <button>Add Task</button></form>
 {% for t in tasks %}
-<div class="card"><strong>{{t.title}}</strong><br>{{t.weekday}} {{t.start_time}} • {{t.category}}</div>
+<div class="card"><strong>{{t.title}}</strong><br>{{t.weekday}} {{t.start_time}} {{t.start_date.strftime('%m/%d/%Y')}} • {{t.category}}</div>
 {% endfor %}
 </div></body></html>

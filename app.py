@@ -43,6 +43,8 @@ def tasks():
             title=request.form["title"],
             weekday=request.form["weekday"],
             start_time=request.form["start_time"],
+            #start_date=request.form["start_date"],
+            start_date=datetime.datetime.strptime(request.form["start_date"], '%m/%d/%Y').date(),
             duration_minutes=int(request.form["duration"]),
             checkin_interval=int(request.form["interval"]),
             snooze_limit=int(request.form["snooze"]),
