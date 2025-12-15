@@ -16,7 +16,7 @@ def focus_check():
     weekday=now.strftime("%a")[:3]
     tasks=session.query(Task).filter(Task.weekday==weekday).all()
     for t in tasks:
-        start=datetime.datetime.strptime(t.start_time,"%H:%M").time()
+        start=t.start_time
         end=(datetime.datetime.combine(now.date(),start)+datetime.timedelta(minutes=t.duration_minutes)).time()
         if start<=now.time()<=end:
             session.add(TaskHistory(task_id=t.id,status="check_in_triggered"))
@@ -30,21 +30,29 @@ scheduler.start()
 @app.route("/")
 def home():
     s=SessionLocal()
-    now=datetime.datetime.now()
-    w=now.strftime("%a")[:3]
-    tasks=s.query(Task).filter(Task.weekday==w).all()
-    return render_template("dashboard.html",tasks=tasks,navbar=navbar)
+    now=datetime.datetime.today()
+    tasks=s.query(Task).filter(Task.start_date==now.date()).order_by(Task.start_time).all()
+    alphalist = []
+    for t in tasks:
+        alphalist.append(t)
+    category_sort = sorted(alphalist, key=lambda Task: Task.category)
+    selected = request.args.get('filter', 'none')
+    if selected == 'category':
+        items = category_sort
+    else:
+        items = tasks
+    return render_template("dashboard.html",tasks=tasks,navbar=navbar,items=items, selected=selected )
 
 @app.route("/tasks",methods=["GET","POST"])
 def tasks():
     s=SessionLocal()
     if request.method=="POST":
+        date = datetime.datetime.strptime(request.form["start_date"], '%m/%d/%Y').date()
         t=Task(
             title=request.form["title"],
-            weekday=request.form["weekday"],
-            start_time=request.form["start_time"],
-            #start_date=request.form["start_date"],
-            start_date=datetime.datetime.strptime(request.form["start_date"], '%m/%d/%Y').date(),
+            weekday=date.strftime('%a'),
+            start_time=datetime.datetime.strptime(request.form["start_time"], '%H:%M').time(),
+            start_date=date,
             duration_minutes=int(request.form["duration"]),
             checkin_interval=int(request.form["interval"]),
             snooze_limit=int(request.form["snooze"]),
