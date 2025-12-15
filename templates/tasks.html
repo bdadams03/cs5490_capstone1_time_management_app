@@ -13,6 +13,6 @@
 <input name="category" placeholder="Category">
 <button>Add Task</button></form>
 {% for t in tasks %}
-<div class="card"><strong>{{t.title}}</strong><br>{{t.weekday}} {{t.start_time}} {{t.start_date.strftime('%m/%d/%Y')}} • {{t.category}}</div>
+<div class="card"><strong>{{t.title}}</strong><br>{{t.weekday}} {{t.start_time.strftime('%H:%M')}} {{t.start_date.strftime('%m/%d/%Y')}} • {{t.category}}</div>
 {% endfor %}
 </div></body></html>

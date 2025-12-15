@@ -2,7 +2,13 @@
 <html><head><link rel="stylesheet" href="/static/style.css"></head><body>
 <div class="navbar">{% for k,v in navbar.items() %}<a href="{{k}}"{% if k=='/' %} class="active"{% endif %}>{{v}}</a>{% endfor %}</div>
 <div class="container"><h2>Today's Tasks</h2>
-{% for t in tasks %}
-<div class="card"><strong>{{t.title}}</strong><br>{{t.start_time}} • {{t.category}}</div>
+<form method="GET">
+    <select name="filter" onchange="this.form.submit()">
+        <option value="none" {% if selected == 'none' %}selected{% endif %}>None</option>
+        <option value ="category" {% if selected == 'category' %}selected{% endif %}>Category</option>
+    </select>
+</form>
+{% for t in items %}
+<div class="card"><strong>{{t.title}}</strong><br>{{t.weekday}} {{t.start_time.strftime('%H:%M')}} {{t.start_date.strftime('%m/%d/%Y')}} • {{t.category}}</div>
 {% endfor %}
 </div></body></html>

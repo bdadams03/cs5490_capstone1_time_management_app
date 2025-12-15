@@ -4,6 +4,6 @@
 <div class="container"><h2>Weekly View</h2>
 {% for day,items in grid.items() %}
 <h3>{{day}}</h3>
-{% for t in items %}<div class="card"><strong>{{t.title}}</strong><br>{{t.start_time}} • {{t.category}}</div>{% endfor %}
+{% for t in items %}<div class="card"><strong>{{t.title}}</strong><br>{{t.start_time.strftime('%H:%M')}} • {{t.category}}</div>{% endfor %}
 {% endfor %}
 </div></body></html>
