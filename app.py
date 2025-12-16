@@ -1,12 +1,14 @@
 
-from flask import Flask, render_template, request, redirect, send_file # pyright: ignore[reportMissingImports]
+from flask import Flask, render_template, request, redirect, send_file, flash # pyright: ignore[reportMissingImports]
 from apscheduler.schedulers.background import BackgroundScheduler # pyright: ignore[reportMissingImports]
 from database import SessionLocal
 from sqlalchemy import desc
 from models import Task, TaskHistory
-import datetime, json
+import datetime, json, secrets
 
 app = Flask(__name__)
+
+app.secret_key = secrets.token_hex(16) #DEVONLY: generates random 32 character hex key (needed for flash)
 
 navbar={'/':'Home','/tasks':'Tasks','/analytics':'Analytics','/weekly':'Weekly','/export':'Export','/import':'Import'}
 
@@ -47,18 +49,66 @@ def home():
 def tasks():
     s=SessionLocal()
     if request.method=="POST":
-        date = datetime.datetime.strptime(request.form["start_date"], '%m/%d/%Y').date()
+        title=request.form.get('title', '').strip()
+        start_time_string=request.form.get('start_time', '').strip()
+        start_date_string=request.form.get('start_date', '').strip()
+        duration_minutes=request.form.get('duration', '').strip()
+        checkin_interval=request.form.get('interval', '').strip()
+        snooze_limit=request.form.get('snooze', '').strip()
+        category=request.form.get('category', '').strip()
+
+        
+        error = None
+        
+        if not title:
+            error = "Task title is required."
+
+        if not error:
+            try:
+                start_time = datetime.datetime.strptime(start_time_string, '%H:%M').time()
+            except (ValueError, TypeError):
+                error = "Invalid time format. Please Use HH:MM (24-hour format)."
+
+        if not error:
+            try:
+                start_date = datetime.datetime.strptime(start_date_string, '%m/%d/%Y').date()
+            except (ValueError, TypeError):
+                error = "Invalid date format. Please use MM/DD/YYYY."
+                
+        if not error:
+            try:
+                duration_val = int(duration_minutes) if duration_minutes else None
+                interval_val = int(checkin_interval) if checkin_interval else None
+                snooze_val = int(snooze_limit) if snooze_limit else None
+            except ValueError:
+                error = "Duration (minutes), checkin interval (minutes), and snooze limit (minutes) must be integers."
+                
+        if error:
+            flash(error, 'error')
+            return (render_template("tasks.html",
+                                   tasks=s.query(Task).all(),
+                                   title=title,
+                                   start_date=start_date_string,
+                                   start_time=start_time_string,
+                                   duration_minutes=duration_minutes,
+                                   checkin_interval=checkin_interval,
+                                   snooze_limit=snooze_limit,
+                                   category=category,
+                                   navbar=navbar))
+            
+           
         t=Task(
-            title=request.form["title"],
-            weekday=date.strftime('%a'),
-            start_time=datetime.datetime.strptime(request.form["start_time"], '%H:%M').time(),
-            start_date=date,
-            duration_minutes=int(request.form["duration"]),
-            checkin_interval=int(request.form["interval"]),
-            snooze_limit=int(request.form["snooze"]),
-            category=request.form["category"]
+            title=title,
+            weekday=start_date.strftime('%a'),
+            start_time=start_time,
+            start_date=start_date,
+            duration_minutes=duration_val,
+            checkin_interval=interval_val,
+            snooze_limit=snooze_val,
+            category=category
         )
         s.add(t); s.commit()
+        flash("Task added sucessfully")
         return redirect("/tasks")
     items=s.query(Task).all()
     return render_template("tasks.html",tasks=items,navbar=navbar)
