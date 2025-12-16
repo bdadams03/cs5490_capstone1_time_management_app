@@ -1,5 +1,5 @@
 
-from flask import Flask, render_template, request, redirect, send_file, flash # pyright: ignore[reportMissingImports]
+from flask import Flask, render_template, request, redirect, send_file, flash, url_for # pyright: ignore[reportMissingImports]
 from apscheduler.schedulers.background import BackgroundScheduler # pyright: ignore[reportMissingImports]
 from database import SessionLocal
 from sqlalchemy import desc
@@ -11,6 +11,7 @@ app = Flask(__name__)
 app.secret_key = secrets.token_hex(16) #DEVONLY: generates random 32 character hex key (needed for flash)
 
 navbar={'/':'Home','/tasks':'Tasks','/analytics':'Analytics','/weekly':'Weekly','/export':'Export','/import':'Import'}
+
 
 def focus_check():
     session=SessionLocal()
@@ -32,13 +33,15 @@ scheduler.start()
 @app.route("/")
 def home():
     s=SessionLocal()
+    
+    selected = request.args.get('filter', 'none')
+
+    
     now=datetime.datetime.today()
     tasks=s.query(Task).filter(Task.start_date==now.date()).order_by(Task.start_time).all()
-    alphalist = []
-    for t in tasks:
-        alphalist.append(t)
-    category_sort = sorted(alphalist, key=lambda Task: Task.category)
-    selected = request.args.get('filter', 'none')
+    
+    category_sort = sorted(tasks, key=lambda Task: Task.category)
+    
     if selected == 'category':
         items = category_sort
     else:
@@ -47,46 +50,81 @@ def home():
 
 @app.route("/tasks",methods=["GET","POST"])
 def tasks():
-    s=SessionLocal()
-    if request.method=="POST":
-        title=request.form.get('title', '').strip()
-        start_time_string=request.form.get('start_time', '').strip()
-        start_date_string=request.form.get('start_date', '').strip()
-        duration_minutes=request.form.get('duration', '').strip()
-        checkin_interval=request.form.get('interval', '').strip()
-        snooze_limit=request.form.get('snooze', '').strip()
-        category=request.form.get('category', '').strip()
-
+    s = SessionLocal()
+     
+    selected = request.args.get('filter', 'none')
+    
+    tasks=s.query(Task).order_by(Task.start_date).all()
+    
+    category_sort = sorted(tasks, key=lambda t: t.category)
+    title_sort = sorted(tasks, key=lambda t: t.title)
+    
+    if selected == 'category':
+        items=category_sort
+    elif selected == 'title':
+        items = title_sort
+    else:
+        items = tasks
         
-        error = None
+    if request.method == "POST":
+        title = request.form.get('title', '').strip()
+        start_time_string = request.form.get('start_time', '').strip()
+        start_date_string = request.form.get('start_date', '').strip()
+        duration_minutes = request.form.get('duration', '').strip()
+        checkin_interval = request.form.get('interval', '').strip()
+        snooze_limit = request.form.get('snooze', '').strip()
+        category = request.form.get('category', '').strip()
+        
+        error = []
         
         if not title:
-            error = "Task title is required."
+            error.append("Task Title is required.")
+        
+        try:
+            start_time = datetime.datetime.strptime(start_time_string, '%H:%M').time()
+        except(ValueError, TypeError):
+            error.append("Invalid time format. Please use HH:MM (24-hour format).")
+            
+        try:
+            start_date = datetime.datetime.strptime(start_date_string, '%m/%d/%Y').date()
+        except(ValueError, TypeError):
+            error.append("Invalid date format. Please use MM/DD/YYYY.")
+            
+        if not duration_minutes:
+            error.append("Duration is required.")
+        
+        try:
+            duration_val = int(duration_minutes)
+        except ValueError:
+            error.append("Duration (minutes) must be an integer.")
+            
+        if not checkin_interval:
+            error.append("Checkin Interval is required.")
+            
+        try:
+            interval_val = int(checkin_interval)
+        except ValueError:
+            error.append("Checkin Interval (minutes) must be an integer.")
+            
+        if not snooze_limit:
+            error.append("Snooze Limit is required.")
+            
+        try:
+            snooze_val = int(checkin_interval)
+        except ValueError:
+            error.append("Snooze Limit must be an integer.")
 
-        if not error:
-            try:
-                start_time = datetime.datetime.strptime(start_time_string, '%H:%M').time()
-            except (ValueError, TypeError):
-                error = "Invalid time format. Please Use HH:MM (24-hour format)."
-
-        if not error:
-            try:
-                start_date = datetime.datetime.strptime(start_date_string, '%m/%d/%Y').date()
-            except (ValueError, TypeError):
-                error = "Invalid date format. Please use MM/DD/YYYY."
-                
-        if not error:
-            try:
-                duration_val = int(duration_minutes) if duration_minutes else None
-                interval_val = int(checkin_interval) if checkin_interval else None
-                snooze_val = int(snooze_limit) if snooze_limit else None
-            except ValueError:
-                error = "Duration (minutes), checkin interval (minutes), and snooze limit (minutes) must be integers."
-                
+        if category == '':
+            error.append("Category is required.")
+            
+            
         if error:
-            flash(error, 'error')
-            return (render_template("tasks.html",
-                                   tasks=s.query(Task).all(),
+            cleaned_errors = [e.strip() for e in error]
+            error_string = '\n'.join(cleaned_errors).strip()
+            flash(error_string, 'error')
+            return render_template("tasks.html",
+                                   items = items,
+                                   selected=selected,
                                    title=title,
                                    start_date=start_date_string,
                                    start_time=start_time_string,
@@ -94,10 +132,10 @@ def tasks():
                                    checkin_interval=checkin_interval,
                                    snooze_limit=snooze_limit,
                                    category=category,
-                                   navbar=navbar))
+                                   navbar=navbar)
             
-           
-        t=Task(
+        
+        t = Task(
             title=title,
             weekday=start_date.strftime('%a'),
             start_time=start_time,
@@ -107,15 +145,19 @@ def tasks():
             snooze_limit=snooze_val,
             category=category
         )
-        s.add(t); s.commit()
-        flash("Task added sucessfully")
-        return redirect("/tasks")
-    items=s.query(Task).all()
-    return render_template("tasks.html",tasks=items,navbar=navbar)
+        s.add(t)
+        s.commit()
+        flash("Task added successfully", 'success')
+        
+        return redirect(url_for('tasks', filter=selected))
+    
+    return render_template("tasks.html",items=items,selected=selected,navbar=navbar)
+
 
 @app.route("/analytics")
 def analytics():
     s=SessionLocal()
+    selected = request.args.get('filter', 'none')
     hist=s.query(TaskHistory).all()
     totals={}
     for h in hist:
@@ -126,9 +168,13 @@ def analytics():
     tasks=s.query(Task).filter(Task.start_date >= thirtyago.date(), Task.start_date <= now.date()).order_by(desc(Task.start_date)).all()
     data=[]
     for t in tasks:
-        data.append((t.title,totals.get(t.id,0),t.start_date))
-
-    return render_template("analytics.html",data=data,streak=5,consistency="80%",navbar=navbar)
+        data.append((t.title,totals.get(t.id,0),t.start_date,t.category)) ##spot
+    category_sort = sorted(data, key=lambda tup: tup[3])
+    if selected == 'category':
+        items = category_sort
+    else:
+        items = data
+    return render_template("analytics.html",data=data,streak=5,consistency="80%",navbar=navbar,items=items,selected=selected)
 
 @app.route("/weekly")
 def weekly():
