@@ -4,13 +4,18 @@ from apscheduler.schedulers.background import BackgroundScheduler # pyright: ign
 from database import SessionLocal
 from sqlalchemy import desc
 from models import Task, TaskHistory
-import datetime, json, secrets
+import datetime, json, secrets, io
 
 app = Flask(__name__)
 
 app.secret_key = secrets.token_hex(16) #DEVONLY: generates random 32 character hex key (needed for flash)
 
 navbar={'/':'Home','/tasks':'Tasks','/analytics':'Analytics','/weekly':'Weekly','/export':'Export','/import':'Import'}
+
+def json_serial(obj):
+    if isinstance(obj, (datetime.time, datetime.date)):
+        return obj.isoformat()
+    raise TypeError ("Type %s not serializable" % type(obj))
 
 
 def focus_check():
@@ -185,18 +190,33 @@ def weekly():
         grid[t.weekday].append(t)
     return render_template("weekly.html",grid=grid,navbar=navbar)
 
-@app.route("/export")
+@app.route("/export", methods=["GET", "POST"])
 def export_data():
-    s=SessionLocal()
-    tasks=[t.__dict__ for t in s.query(Task).all()]
-    for item in tasks:
-        item.pop("_sa_instance_state",None)
-    hist=[h.__dict__ for h in s.query(TaskHistory).all()]
-    for item in hist:
-        item.pop("_sa_instance_state",None)
-    data={"tasks":tasks,"history":hist}
-    open("export.json","w").write(json.dumps(data))
-    return send_file("export.json",download_name="export.json")
+    if request.method == "POST":
+        s=SessionLocal()
+        tasks=[t.__dict__ for t in s.query(Task).all()]
+        for item in tasks:
+            item.pop("_sa_instance_state",None)
+        hist=[h.__dict__ for h in s.query(TaskHistory).all()]
+        for item in hist:
+            item.pop("_sa_instance_state",None)
+        data={"tasks":tasks,"history":hist}
+        
+        json_data = json.dumps(data, default=json_serial)
+        
+        buffer = io.BytesIO()
+        buffer.write(json_data.encode('utf-8'))
+        buffer.seek(0)
+        
+        return send_file(
+            buffer,
+            as_attachment=True,
+            download_name="export.json",
+            mimetype="application/json"
+        )
+    else:
+        return render_template("export.html", navbar=navbar)
+
 
 @app.route("/import",methods=["GET","POST"])
 def import_data():
