@@ -4,6 +4,7 @@
 <div class="navbar">{% for k,v in navbar.items() %}<a href="{{k}}"{% if k=='/import' %} class="active"{% endif %}>{{v}}</a>{% endfor %}</div>
 <div class="container"><h2>Import</h2>
 <form method="POST" enctype="multipart/form-data" class="card">
+<p><b> Assumes Format is correct. <br> Make sure imported tasks are in correct format and contain all needed information. </b></p>
 <input type="file" name="file">
 <button>Import</button>
 </form></div></body></html>

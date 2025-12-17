@@ -17,6 +17,22 @@ def json_serial(obj):
         return obj.isoformat()
     raise TypeError ("Type %s not serializable" % type(obj))
 
+def parse_iso_date_time(value):
+    if not isinstance(value, str):
+        return value
+    
+    try:
+        return datetime.date.fromisoformat(value)
+    except ValueError:
+        pass
+    
+    try:
+        return datetime.time.fromisoformat(value)
+    except ValueError:
+        pass
+    
+    return value
+
 
 def focus_check():
     session=SessionLocal()
@@ -222,16 +238,21 @@ def export_data():
 def import_data():
     if request.method=="POST":
         f=request.files["file"]
-        data=json.load(f)
-        s=SessionLocal()
-        for t in data.get("tasks",[]):
-            s.add(Task(
-                title=t["title"],weekday=t["weekday"],start_time=t["start_time"],
-                duration_minutes=t["duration_minutes"],checkin_interval=t["checkin_interval"],
-                snooze_limit=t["snooze_limit"],category=t["category"]
-            ))
-        s.commit()
-        return redirect("/tasks")
+        if f:
+            data=json.load(f)
+            s=SessionLocal()
+            for t in data.get("tasks",[]):
+                start_time_obj = datetime.time.fromisoformat(t["start_time"])
+                start_date_obj = datetime.date.fromisoformat(t["start_date"])
+                s.add(Task(
+                    title=t["title"],weekday=t["weekday"],start_time=start_time_obj,start_date=start_date_obj,
+                    duration_minutes=t["duration_minutes"],checkin_interval=t["checkin_interval"],
+                    snooze_limit=t["snooze_limit"],category=t["category"]
+                ))
+            s.commit()
+            return redirect("/tasks")
+        else:
+            pass
     return render_template("import.html",navbar=navbar)
 
 if __name__=="__main__":
