@@ -1,6 +1,6 @@
 
 from sqlalchemy.orm import declarative_base
-from sqlalchemy import Column, Integer, String, Boolean, DateTime, ForeignKey
+from sqlalchemy import Column, Integer, String, DateTime, Date, Time, ForeignKey
 import datetime
 
 Base = declarative_base()
@@ -10,7 +10,8 @@ class Task(Base):
     id = Column(Integer, primary_key=True)
     title = Column(String)
     weekday = Column(String)
-    start_time = Column(String)
+    start_time = Column(Time)
+    start_date = Column(Date)
     duration_minutes = Column(Integer)
     checkin_interval = Column(Integer)
     snooze_limit = Column(Integer)

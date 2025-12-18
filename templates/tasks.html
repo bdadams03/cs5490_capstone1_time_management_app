@@ -1,17 +1,42 @@
 
 <html><head><link rel="stylesheet" href="/static/style.css"></head><body>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
 <div class="navbar">{% for k,v in navbar.items() %}<a href="{{k}}"{% if k=='/tasks' %} class="active"{% endif %}>{{v}}</a>{% endfor %}</div>
 <div class="container"><h2>Tasks</h2>
+
+{% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+        {% for category, message in messages %}
+            <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                * {{ message|replace('\n', '<br> * ')|safe }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close">X</button>
+            </div>
+        {% endfor %}
+    {% endif %}
+    
+{% endwith %}
+
 <form method="POST" class="card">
-<input name="title" placeholder="Task title">
-<select name="weekday"><option>Mon</option><option>Tue</option><option>Wed</option><option>Thu</option><option>Fri</option><option>Sat</option><option>Sun</option></select>
-<input name="start_time" placeholder="09:00">
-<input name="duration" placeholder="Duration">
-<input name="interval" placeholder="Interval">
-<input name="snooze" placeholder="Snooze">
-<input name="category" placeholder="Category">
-<button>Add Task</button></form>
-{% for t in tasks %}
-<div class="card"><strong>{{t.title}}</strong><br>{{t.weekday}} {{t.start_time}} • {{t.category}}</div>
+    <input name="title" placeholder="Task title" value="{{ title|default('') }}">
+    <input name="start_time" placeholder="Start Time (24:00)" value="{{ start_time|default('') }}">
+    <input name="start_date" placeholder="Start Date (MM/DD/YYYY)" value="{{ start_date|default('') }}">
+    <input name="duration" placeholder="Duration (minutes)" value="{{ duration_minutes|default('') }}">
+    <input name="interval" placeholder="Checkin Interval (minutes)" value="{{ checkin_interval|default('') }}">
+    <input name="snooze" placeholder="Snooze Limit" value="{{ snooze_limit|default('') }}">
+    <input name="category" placeholder="Category" value="{{ category|default('') }}">
+    <button>Add Task</button>
+</form>
+
+<form method="GET">
+    <select name="filter" onchange="this.form.submit()">
+        <option value="none" {% if selected == 'none' %}selected{% endif %}>None</option>
+        <option value ="category" {% if selected == 'category' %}selected{% endif %}>Category</option>
+        <option value="title" {% if selected == 'title' %}selected{% endif %}>Title</option>
+    </select>
+</form>
+
+{% for t in items %}
+<div class="card"><strong>{{t.title}}</strong><br>{{t.weekday}} {{t.start_time.strftime('%H:%M')}} {{t.start_date.strftime('%m/%d/%Y')}} • {{t.category}}</div>
 {% endfor %}
 </div></body></html>

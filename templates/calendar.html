@@ -1,0 +1,42 @@
+
+<html><head><link rel="stylesheet" href="/static/style.css">
+<style>
+.calendar-nav { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+.calendar-nav a { text-decoration: none; color: #1a73e8; font-weight: 600; }
+.calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+.calendar-header { background: #1a73e8; color: white; padding: 10px; text-align: center; font-weight: 600; }
+.calendar-day { background: #fff; min-height: 80px; padding: 8px; border: 1px solid #dfe3e8; }
+.calendar-day.empty { background: #f0f0f0; }
+.day-number { font-weight: 600; margin-bottom: 4px; }
+.task-dot { background: #1a73e8; color: white; font-size: 11px; padding: 2px 6px; border-radius: 4px; margin: 2px 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+</style>
+</head><body>
+<div class="navbar">{% for k,v in navbar.items() %}<a href="{{k}}"{% if k=='/calendar' %} class="active"{% endif %}>{{v}}</a>{% endfor %}</div>
+<div class="container">
+<div class="calendar-nav">
+    <a href="?year={{prev_year}}&month={{prev_month}}">&larr; Previous</a>
+    <h2>{{month_name}} {{year}}</h2>
+    <a href="?year={{next_year}}&month={{next_month}}">Next &rarr;</a>
+</div>
+<div class="calendar-grid">
+    <div class="calendar-header">Mon</div>
+    <div class="calendar-header">Tue</div>
+    <div class="calendar-header">Wed</div>
+    <div class="calendar-header">Thu</div>
+    <div class="calendar-header">Fri</div>
+    <div class="calendar-header">Sat</div>
+    <div class="calendar-header">Sun</div>
+    {% for _ in range(first_day_weekday) %}
+    <div class="calendar-day empty"></div>
+    {% endfor %}
+    {% for day in range(1, days_in_month + 1) %}
+    <div class="calendar-day">
+        <div class="day-number">{{day}}</div>
+        {% for t in tasks_by_day.get(day, []) %}
+        <div class="task-dot" title="{{t.title}} - {{t.start_time.strftime('%H:%M')}}">{{t.title}}</div>
+        {% endfor %}
+    </div>
+    {% endfor %}
+</div>
+</div>
+</body></html>
