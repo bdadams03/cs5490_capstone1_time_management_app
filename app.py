@@ -4,34 +4,13 @@ from apscheduler.schedulers.background import BackgroundScheduler # pyright: ign
 from database import SessionLocal
 from sqlalchemy import desc
 from models import Task, TaskHistory
-import datetime, json, secrets, io
+import datetime, json, secrets
 
 app = Flask(__name__)
 
 app.secret_key = secrets.token_hex(16) #DEVONLY: generates random 32 character hex key (needed for flash)
 
-navbar={'/':'Home','/tasks':'Tasks','/analytics':'Analytics','/weekly':'Weekly','/export':'Export','/import':'Import'}
-
-def json_serial(obj):
-    if isinstance(obj, (datetime.time, datetime.date)):
-        return obj.isoformat()
-    raise TypeError ("Type %s not serializable" % type(obj))
-
-def parse_iso_date_time(value):
-    if not isinstance(value, str):
-        return value
-    
-    try:
-        return datetime.date.fromisoformat(value)
-    except ValueError:
-        pass
-    
-    try:
-        return datetime.time.fromisoformat(value)
-    except ValueError:
-        pass
-    
-    return value
+navbar={'/':'Home','/tasks':'Tasks','/calendar':'Calendar','/analytics':'Analytics','/weekly':'Weekly','/export':'Export','/import':'Import'}
 
 
 def focus_check():
@@ -175,6 +154,43 @@ def tasks():
     return render_template("tasks.html",items=items,selected=selected,navbar=navbar)
 
 
+@app.route("/calendar")
+def calendar():
+    s = SessionLocal()
+    year = request.args.get('year', type=int, default=datetime.datetime.today().year)
+    month = request.args.get('month', type=int, default=datetime.datetime.today().month)
+    import calendar as cal
+    first_day_weekday, days_in_month = cal.monthrange(year, month)
+    
+    tasks = s.query(Task).filter(
+        Task.start_date >= datetime.date(year, month, 1),
+        Task.start_date <= datetime.date(year, month, days_in_month)
+    ).all()
+    tasks_by_day = {}
+    for t in tasks:
+        day = t.start_date.day
+        if day not in tasks_by_day:
+            tasks_by_day[day] = []
+        tasks_by_day[day].append(t)
+    
+    prev_month = month - 1 if month > 1 else 12
+    prev_year = year if month > 1 else year - 1
+    next_month = month + 1 if month < 12 else 1
+    next_year = year if month < 12 else year + 1 
+    month_name = cal.month_name[month]
+    return render_template("calendar.html", 
+                           navbar=navbar,
+                           year=year, 
+                           month=month,
+                           month_name=month_name,
+                           first_day_weekday=first_day_weekday,
+                           days_in_month=days_in_month,
+                           tasks_by_day=tasks_by_day,
+                           prev_month=prev_month,
+                           prev_year=prev_year,
+                           next_month=next_month,
+                           next_year=next_year)
+
 @app.route("/analytics")
 def analytics():
     s=SessionLocal()
@@ -206,54 +222,35 @@ def weekly():
         grid[t.weekday].append(t)
     return render_template("weekly.html",grid=grid,navbar=navbar)
 
-@app.route("/export", methods=["GET", "POST"])
+@app.route("/export")
 def export_data():
-    if request.method == "POST":
-        s=SessionLocal()
-        tasks=[t.__dict__ for t in s.query(Task).all()]
-        for item in tasks:
-            item.pop("_sa_instance_state",None)
-        hist=[h.__dict__ for h in s.query(TaskHistory).all()]
-        for item in hist:
-            item.pop("_sa_instance_state",None)
-        data={"tasks":tasks,"history":hist}
-        
-        json_data = json.dumps(data, default=json_serial)
-        
-        buffer = io.BytesIO()
-        buffer.write(json_data.encode('utf-8'))
-        buffer.seek(0)
-        
-        return send_file(
-            buffer,
-            as_attachment=True,
-            download_name="export.json",
-            mimetype="application/json"
-        )
-    else:
-        return render_template("export.html", navbar=navbar)
-
+    s=SessionLocal()
+    tasks=[t.__dict__ for t in s.query(Task).all()]
+    for item in tasks:
+        item.pop("_sa_instance_state",None)
+    hist=[h.__dict__ for h in s.query(TaskHistory).all()]
+    for item in hist:
+        item.pop("_sa_instance_state",None)
+    data={"tasks":tasks,"history":hist}
+    open("export.json","w").write(json.dumps(data))
+    return send_file("export.json",download_name="export.json")
 
 @app.route("/import",methods=["GET","POST"])
 def import_data():
     if request.method=="POST":
         f=request.files["file"]
-        if f:
-            data=json.load(f)
-            s=SessionLocal()
-            for t in data.get("tasks",[]):
-                start_time_obj = datetime.time.fromisoformat(t["start_time"])
-                start_date_obj = datetime.date.fromisoformat(t["start_date"])
-                s.add(Task(
-                    title=t["title"],weekday=t["weekday"],start_time=start_time_obj,start_date=start_date_obj,
-                    duration_minutes=t["duration_minutes"],checkin_interval=t["checkin_interval"],
-                    snooze_limit=t["snooze_limit"],category=t["category"]
-                ))
-            s.commit()
-            return redirect("/tasks")
-        else:
-            pass
+        data=json.load(f)
+        s=SessionLocal()
+        for t in data.get("tasks",[]):
+            s.add(Task(
+                title=t["title"],weekday=t["weekday"],start_time=t["start_time"],
+                duration_minutes=t["duration_minutes"],checkin_interval=t["checkin_interval"],
+                snooze_limit=t["snooze_limit"],category=t["category"]
+            ))
+        s.commit()
+        return redirect("/tasks")
     return render_template("import.html",navbar=navbar)
 
 if __name__=="__main__":
     app.run(debug=True)
+
