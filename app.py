@@ -4,13 +4,34 @@ from apscheduler.schedulers.background import BackgroundScheduler # pyright: ign
 from database import SessionLocal
 from sqlalchemy import desc
 from models import Task, TaskHistory
-import datetime, json, secrets
+import datetime, json, secrets, io
 
 app = Flask(__name__)
 
 app.secret_key = secrets.token_hex(16) #DEVONLY: generates random 32 character hex key (needed for flash)
 
-navbar={'/':'Home','/tasks':'Tasks','/calendar':'Calendar','/analytics':'Analytics','/weekly':'Weekly','/export':'Export','/import':'Import'}
+navbar={'/':'Home','/tasks':'Tasks','/analytics':'Analytics','/weekly':'Weekly','/export':'Export','/import':'Import'}
+
+def json_serial(obj):
+    if isinstance(obj, (datetime.time, datetime.date)):
+        return obj.isoformat()
+    raise TypeError ("Type %s not serializable" % type(obj))
+
+def parse_iso_date_time(value):
+    if not isinstance(value, str):
+        return value
+    
+    try:
+        return datetime.date.fromisoformat(value)
+    except ValueError:
+        pass
+    
+    try:
+        return datetime.time.fromisoformat(value)
+    except ValueError:
+        pass
+    
+    return value
 
 
 def focus_check():
@@ -222,33 +243,53 @@ def weekly():
         grid[t.weekday].append(t)
     return render_template("weekly.html",grid=grid,navbar=navbar)
 
-@app.route("/export")
+@app.route("/export", methods=["GET", "POST"])
 def export_data():
-    s=SessionLocal()
-    tasks=[t.__dict__ for t in s.query(Task).all()]
-    for item in tasks:
-        item.pop("_sa_instance_state",None)
-    hist=[h.__dict__ for h in s.query(TaskHistory).all()]
-    for item in hist:
-        item.pop("_sa_instance_state",None)
-    data={"tasks":tasks,"history":hist}
-    open("export.json","w").write(json.dumps(data))
-    return send_file("export.json",download_name="export.json")
+    if request.method == "POST":
+        s=SessionLocal()
+        tasks=[t.__dict__ for t in s.query(Task).all()]
+        for item in tasks:
+            item.pop("_sa_instance_state",None)
+        hist=[h.__dict__ for h in s.query(TaskHistory).all()]
+        for item in hist:
+            item.pop("_sa_instance_state",None)
+        data={"tasks":tasks,"history":hist}
+        
+        json_data = json.dumps(data, default=json_serial)
+        
+        buffer = io.BytesIO()
+        buffer.write(json_data.encode('utf-8'))
+        buffer.seek(0)
+        
+        return send_file(
+            buffer,
+            as_attachment=True,
+            download_name="export.json",
+            mimetype="application/json"
+        )
+    else:
+        return render_template("export.html", navbar=navbar)
+
 
 @app.route("/import",methods=["GET","POST"])
 def import_data():
     if request.method=="POST":
         f=request.files["file"]
-        data=json.load(f)
-        s=SessionLocal()
-        for t in data.get("tasks",[]):
-            s.add(Task(
-                title=t["title"],weekday=t["weekday"],start_time=t["start_time"],
-                duration_minutes=t["duration_minutes"],checkin_interval=t["checkin_interval"],
-                snooze_limit=t["snooze_limit"],category=t["category"]
-            ))
-        s.commit()
-        return redirect("/tasks")
+        if f:
+            data=json.load(f)
+            s=SessionLocal()
+            for t in data.get("tasks",[]):
+                start_time_obj = datetime.time.fromisoformat(t["start_time"])
+                start_date_obj = datetime.date.fromisoformat(t["start_date"])
+                s.add(Task(
+                    title=t["title"],weekday=t["weekday"],start_time=start_time_obj,start_date=start_date_obj,
+                    duration_minutes=t["duration_minutes"],checkin_interval=t["checkin_interval"],
+                    snooze_limit=t["snooze_limit"],category=t["category"]
+                ))
+            s.commit()
+            return redirect("/tasks")
+        else:
+            pass
     return render_template("import.html",navbar=navbar)
 
 if __name__=="__main__":
