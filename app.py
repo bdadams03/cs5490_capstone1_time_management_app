@@ -175,6 +175,43 @@ def tasks():
     return render_template("tasks.html",items=items,selected=selected,navbar=navbar)
 
 
+@app.route("/calendar")
+def calendar():
+    s = SessionLocal()
+    year = request.args.get('year', type=int, default=datetime.datetime.today().year)
+    month = request.args.get('month', type=int, default=datetime.datetime.today().month)
+    import calendar as cal
+    first_day_weekday, days_in_month = cal.monthrange(year, month)
+    
+    tasks = s.query(Task).filter(
+        Task.start_date >= datetime.date(year, month, 1),
+        Task.start_date <= datetime.date(year, month, days_in_month)
+    ).all()
+    tasks_by_day = {}
+    for t in tasks:
+        day = t.start_date.day
+        if day not in tasks_by_day:
+            tasks_by_day[day] = []
+        tasks_by_day[day].append(t)
+    
+    prev_month = month - 1 if month > 1 else 12
+    prev_year = year if month > 1 else year - 1
+    next_month = month + 1 if month < 12 else 1
+    next_year = year if month < 12 else year + 1 
+    month_name = cal.month_name[month]
+    return render_template("calendar.html", 
+                           navbar=navbar,
+                           year=year, 
+                           month=month,
+                           month_name=month_name,
+                           first_day_weekday=first_day_weekday,
+                           days_in_month=days_in_month,
+                           tasks_by_day=tasks_by_day,
+                           prev_month=prev_month,
+                           prev_year=prev_year,
+                           next_month=next_month,
+                           next_year=next_year)
+
 @app.route("/analytics")
 def analytics():
     s=SessionLocal()
