@@ -10,7 +10,7 @@ app = Flask(__name__)
 
 app.secret_key = secrets.token_hex(16) #DEVONLY: generates random 32 character hex key (needed for flash)
 
-navbar={'/':'Home','/tasks':'Tasks','/analytics':'Analytics','/weekly':'Weekly','/export':'Export','/import':'Import'}
+navbar={'/':'Home','/tasks':'Tasks','/calendar':'Calendar','/analytics':'Analytics','/weekly':'Weekly','/export':'Export','/import':'Import'}
 
 def json_serial(obj):
     if isinstance(obj, (datetime.time, datetime.date)):
